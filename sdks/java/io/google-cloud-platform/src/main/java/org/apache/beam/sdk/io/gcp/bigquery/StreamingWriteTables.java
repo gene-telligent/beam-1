@@ -62,19 +62,23 @@ public class StreamingWriteTables extends PTransform<
   }
 
   StreamingWriteTables withTestServices(BigQueryServices bigQueryServices) {
-    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
+    return new StreamingWriteTables(bigQueryServices, retryPolicy,
+            skipInvalidRows, ignoreUnknownValues);
   }
 
   StreamingWriteTables withInsertRetryPolicy(InsertRetryPolicy retryPolicy) {
-    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
+    return new StreamingWriteTables(bigQueryServices, retryPolicy,
+            skipInvalidRows, ignoreUnknownValues);
   }
 
   StreamingWriteTables skipInvalidRows(boolean skipInvalidRows) {
-    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
+    return new StreamingWriteTables(bigQueryServices, retryPolicy,
+            skipInvalidRows, ignoreUnknownValues);
   }
 
   StreamingWriteTables ignoreUnknownValues(boolean ignoreUnknownValues) {
-    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
+    return new StreamingWriteTables(bigQueryServices, retryPolicy,
+            skipInvalidRows, ignoreUnknownValues);
   }
 
   @Override

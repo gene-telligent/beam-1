@@ -64,23 +64,26 @@ public class StreamingInserts<DestinationT>
    */
   public StreamingInserts<DestinationT> withInsertRetryPolicy(InsertRetryPolicy retryPolicy) {
     return new StreamingInserts<>(
-        createDisposition, dynamicDestinations, bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
+        createDisposition, dynamicDestinations, bigQueryServices,
+        retryPolicy, skipInvalidRows, ignoreUnknownValues);
   }
 
   StreamingInserts<DestinationT> withTestServices(BigQueryServices bigQueryServices) {
     return new StreamingInserts<>(
-        createDisposition, dynamicDestinations, bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);  }
+            createDisposition, dynamicDestinations, bigQueryServices,
+            retryPolicy, skipInvalidRows, ignoreUnknownValues);
+  }
 
   StreamingInserts<DestinationT> skipInvalidRows(boolean skipInvalidRows) {
     return new StreamingInserts<>(
-            createDisposition, dynamicDestinations, bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues
-    );
+            createDisposition, dynamicDestinations, bigQueryServices,
+            retryPolicy, skipInvalidRows, ignoreUnknownValues);
   }
 
   StreamingInserts<DestinationT> ignoreUnknownValues(boolean ignoreUnknownValues) {
     return new StreamingInserts<>(
-            createDisposition, dynamicDestinations, bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues
-    );
+            createDisposition, dynamicDestinations, bigQueryServices,
+            retryPolicy, skipInvalidRows, ignoreUnknownValues);
   }
 
   @Override
