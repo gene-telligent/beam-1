@@ -1023,6 +1023,8 @@ public class BigQueryIO {
         .setWriteDisposition(Write.WriteDisposition.WRITE_EMPTY)
         .setNumFileShards(0)
         .setMethod(Write.Method.DEFAULT)
+        .setSkipInvalidRows(false)
+        .setIgnoreUnknownValues(false)
         .build();
   }
 
@@ -1104,6 +1106,10 @@ public class BigQueryIO {
 
     @Nullable abstract ValueProvider<String> getCustomGcsTempLocation();
 
+    abstract Boolean getSkipInvalidRows();
+
+    abstract Boolean getIgnoreUnknownValues();
+
     abstract Builder<T> toBuilder();
 
     @AutoValue.Builder
@@ -1133,6 +1139,10 @@ public class BigQueryIO {
       abstract Builder<T> setFailedInsertRetryPolicy(InsertRetryPolicy retryPolicy);
 
       abstract Builder<T> setCustomGcsTempLocation(ValueProvider<String> customGcsTempLocation);
+
+      abstract Builder<T> setSkipInvalidRows(Boolean skipInvalidRows);
+
+      abstract Builder<T> setIgnoreUnknownValues(Boolean ignoreUnknownValues);
 
       abstract Write<T> build();
     }
@@ -1407,6 +1417,14 @@ public class BigQueryIO {
       return toBuilder().setCustomGcsTempLocation(customGcsTempLocation).build();
     }
 
+    public Write<T> skipInvalidRows(Boolean skipInvalidRows) {
+      return toBuilder().setSkipInvalidRows(skipInvalidRows).build();
+    }
+
+    public Write<T> ignoreUnknownValues(Boolean ignoreUnknownValues) {
+      return toBuilder().setIgnoreUnknownValues(ignoreUnknownValues).build();
+    }
+
     @VisibleForTesting
     Write<T> withTestServices(BigQueryServices testServices) {
       checkArgument(testServices != null, "testServices can not be null");
@@ -1586,7 +1604,9 @@ public class BigQueryIO {
         StreamingInserts<DestinationT> streamingInserts =
             new StreamingInserts<>(getCreateDisposition(), dynamicDestinations)
                 .withInsertRetryPolicy(retryPolicy)
-                .withTestServices((getBigQueryServices()));
+                .withTestServices((getBigQueryServices()))
+                .ignoreUnknownValues(getIgnoreUnknownValues())
+                .skipInvalidRows(getSkipInvalidRows());
         return rowsWithDestination.apply(streamingInserts);
       } else {
         checkArgument(getFailedInsertRetryPolicy() == null,

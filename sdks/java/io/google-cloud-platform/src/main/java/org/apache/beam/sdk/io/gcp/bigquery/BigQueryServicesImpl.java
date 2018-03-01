@@ -655,7 +655,8 @@ class BigQueryServicesImpl implements BigQueryServices {
     long insertAll(TableReference ref, List<ValueInSingleWindow<TableRow>> rowList,
                    @Nullable List<String> insertIdList,
                    BackOff backoff, final Sleeper sleeper, InsertRetryPolicy retryPolicy,
-                   List<ValueInSingleWindow<TableRow>> failedInserts)
+                   List<ValueInSingleWindow<TableRow>> failedInserts, boolean skipInvalidRows,
+                   boolean ignoreUnknownValues)
         throws IOException, InterruptedException {
       checkNotNull(ref, "ref");
       if (executor == null) {
@@ -698,6 +699,8 @@ class BigQueryServicesImpl implements BigQueryServices {
               || i == rowsToPublish.size() - 1) {
             TableDataInsertAllRequest content = new TableDataInsertAllRequest();
             content.setRows(rows);
+            content.setIgnoreUnknownValues(ignoreUnknownValues);
+            content.setSkipInvalidRows(skipInvalidRows);
 
             final Bigquery.Tabledata.InsertAll insert = client.tabledata()
                 .insertAll(ref.getProjectId(), ref.getDatasetId(), ref.getTableId(),
@@ -795,15 +798,17 @@ class BigQueryServicesImpl implements BigQueryServices {
 
     @Override
     public long insertAll(
-        TableReference ref, List<ValueInSingleWindow<TableRow>> rowList,
-        @Nullable List<String> insertIdList,
-        InsertRetryPolicy retryPolicy, List<ValueInSingleWindow<TableRow>> failedInserts)
-        throws IOException, InterruptedException {
+            TableReference ref, List<ValueInSingleWindow<TableRow>> rowList,
+            @Nullable List<String> insertIdList,
+            InsertRetryPolicy retryPolicy, List<ValueInSingleWindow<TableRow>> failedInserts,
+            boolean skipInvalidRows, boolean ignoreUnknownValues)
+            throws IOException, InterruptedException {
       return insertAll(
-          ref, rowList, insertIdList,
-          BackOffAdapter.toGcpBackOff(
-              INSERT_BACKOFF_FACTORY.backoff()),
-          Sleeper.DEFAULT, retryPolicy, failedInserts);
+              ref, rowList, insertIdList,
+              BackOffAdapter.toGcpBackOff(
+                      INSERT_BACKOFF_FACTORY.backoff()),
+              Sleeper.DEFAULT, retryPolicy, failedInserts,
+              skipInvalidRows, ignoreUnknownValues);
     }
 
 

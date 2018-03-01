@@ -46,22 +46,35 @@ public class StreamingWriteTables extends PTransform<
     PCollection<KV<TableDestination, TableRow>>, WriteResult> {
   private BigQueryServices bigQueryServices;
   private InsertRetryPolicy retryPolicy;
+  private boolean skipInvalidRows;
+  private boolean ignoreUnknownValues;
 
   public StreamingWriteTables() {
-    this(new BigQueryServicesImpl(), InsertRetryPolicy.alwaysRetry());
+    this(new BigQueryServicesImpl(), InsertRetryPolicy.alwaysRetry(), false, false);
   }
 
-  private StreamingWriteTables(BigQueryServices bigQueryServices, InsertRetryPolicy retryPolicy) {
+  private StreamingWriteTables(BigQueryServices bigQueryServices, InsertRetryPolicy retryPolicy,
+                               boolean skipInvalidRows, boolean ignoreUnknownValues) {
     this.bigQueryServices = bigQueryServices;
     this.retryPolicy = retryPolicy;
+    this.skipInvalidRows = skipInvalidRows;
+    this.ignoreUnknownValues = ignoreUnknownValues;
   }
 
   StreamingWriteTables withTestServices(BigQueryServices bigQueryServices) {
-    return new StreamingWriteTables(bigQueryServices, retryPolicy);
+    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
   }
 
   StreamingWriteTables withInsertRetryPolicy(InsertRetryPolicy retryPolicy) {
-    return new StreamingWriteTables(bigQueryServices, retryPolicy);
+    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
+  }
+
+  StreamingWriteTables skipInvalidRows(boolean skipInvalidRows) {
+    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
+  }
+
+  StreamingWriteTables ignoreUnknownValues(boolean ignoreUnknownValues) {
+    return new StreamingWriteTables(bigQueryServices, retryPolicy, skipInvalidRows, ignoreUnknownValues);
   }
 
   @Override
@@ -103,7 +116,8 @@ public class StreamingWriteTables extends PTransform<
                     .discardingFiredPanes())
             .apply(
                 "StreamingWrite",
-                ParDo.of(new StreamingWriteFn(bigQueryServices, retryPolicy, failedInsertsTag))
+                ParDo.of(new StreamingWriteFn(bigQueryServices, retryPolicy, failedInsertsTag,
+                        skipInvalidRows, ignoreUnknownValues))
                     .withOutputTags(mainOutputTag, TupleTagList.of(failedInsertsTag)));
     PCollection<TableRow> failedInserts = tuple.get(failedInsertsTag);
     failedInserts.setCoder(TableRowJsonCoder.of());

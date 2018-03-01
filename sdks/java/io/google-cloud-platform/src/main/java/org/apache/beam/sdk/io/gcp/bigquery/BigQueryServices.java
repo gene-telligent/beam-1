@@ -162,7 +162,8 @@ interface BigQueryServices extends Serializable {
      */
     long insertAll(TableReference ref, List<ValueInSingleWindow<TableRow>> rowList,
                    @Nullable List<String> insertIdList, InsertRetryPolicy retryPolicy,
-                   List<ValueInSingleWindow<TableRow>> failedInserts)
+                   List<ValueInSingleWindow<TableRow>> failedInserts, boolean skipInvalidRows,
+                   boolean ignoreUnknownValues)
         throws IOException, InterruptedException;
 
     /** Patch BigQuery {@link Table} description. */
