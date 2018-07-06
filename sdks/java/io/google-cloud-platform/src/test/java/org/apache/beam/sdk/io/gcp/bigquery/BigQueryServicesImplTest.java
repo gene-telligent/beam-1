@@ -509,7 +509,9 @@ public class BigQueryServicesImplTest {
         BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
         new MockSleeper(),
         InsertRetryPolicy.alwaysRetry(),
-        null);
+        null,
+        false,
+        false);
     verify(response, times(2)).getStatusCode();
     verify(response, times(2)).getContent();
     verify(response, times(2)).getContentType();
@@ -556,7 +558,9 @@ public class BigQueryServicesImplTest {
         BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
         new MockSleeper(),
         InsertRetryPolicy.alwaysRetry(),
-        null);
+        null,
+        false,
+        false);
     verify(response, times(2)).getStatusCode();
     verify(response, times(2)).getContent();
     verify(response, times(2)).getContentType();
@@ -598,7 +602,9 @@ public class BigQueryServicesImplTest {
           BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
           new MockSleeper(),
           InsertRetryPolicy.alwaysRetry(),
-          null);
+          null,
+          false,
+          false);
       fail();
     } catch (IOException e) {
       assertThat(e, instanceOf(IOException.class));
@@ -643,7 +649,9 @@ public class BigQueryServicesImplTest {
           BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
           new MockSleeper(),
           InsertRetryPolicy.alwaysRetry(),
-          null);
+          null,
+          false,
+          false);
       fail();
     } catch (RuntimeException e) {
       verify(response, times(1)).getStatusCode();
@@ -711,7 +719,9 @@ public class BigQueryServicesImplTest {
         BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
         new MockSleeper(),
         InsertRetryPolicy.retryTransientErrors(),
-        failedInserts);
+        failedInserts,
+        false,
+        false);
     assertEquals(1, failedInserts.size());
     expectedLogs.verifyInfo("Retrying 1 failed inserts to BigQuery");
   }
