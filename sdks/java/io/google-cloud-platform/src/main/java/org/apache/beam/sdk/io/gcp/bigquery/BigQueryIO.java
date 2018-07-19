@@ -1709,7 +1709,8 @@ public class BigQueryIO {
                 dynamicDestinations,
                 destinationCoder,
                 getCustomGcsTempLocation(),
-                getLoadJobProjectId());
+                getLoadJobProjectId(),
+                getIgnoreUnknownValues());
         batchLoads.setTestServices(getBigQueryServices());
         if (getMaxFilesPerBundle() != null) {
           batchLoads.setMaxNumWritersPerBundle(getMaxFilesPerBundle());
