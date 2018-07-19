@@ -55,6 +55,7 @@ import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableReference;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.api.services.bigquery.model.TableSchema;
+import com.google.api.services.bigquery.model.TableDataInsertAllRequest;
 import com.google.cloud.hadoop.util.ApiErrorExtractor;
 import com.google.cloud.hadoop.util.RetryBoundedBackOff;
 import com.google.common.collect.ImmutableList;
@@ -92,22 +93,25 @@ public class BigQueryServicesImplTest {
   @Rule public ExpectedException thrown = ExpectedException.none();
   @Rule public ExpectedLogs expectedLogs = ExpectedLogs.none(BigQueryServicesImpl.class);
   @Mock private LowLevelHttpResponse response;
+  private MockLowLevelHttpRequest request;
   private Bigquery bigquery;
 
   @Before
   public void setUp() {
     MockitoAnnotations.initMocks(this);
 
+    // Set up the MockHttpRequest for future inspection
+    request = new MockLowLevelHttpRequest() {
+      @Override
+      public LowLevelHttpResponse execute() throws IOException {
+        return response;
+      }
+    };
+
     // A mock transport that lets us mock the API responses.
     MockHttpTransport transport =
         new MockHttpTransport.Builder()
-            .setLowLevelHttpRequest(
-                new MockLowLevelHttpRequest() {
-                  @Override
-                  public LowLevelHttpResponse execute() throws IOException {
-                    return response;
-                  }
-                })
+            .setLowLevelHttpRequest(request)
             .build();
 
     // A sample BigQuery API client that uses default JsonFactory and RetryHttpInitializer.
@@ -724,6 +728,66 @@ public class BigQueryServicesImplTest {
         false);
     assertEquals(1, failedInserts.size());
     expectedLogs.verifyInfo("Retrying 1 failed inserts to BigQuery");
+  }
+
+  /**
+   * Tests that {@link DatasetServiceImpl#insertAll} respects the skipInvalidRows and
+   * ignoreUnknownValues parameters.
+   */
+  @Test
+  public void testSkipInvalidRowsIgnoreUnknownValuesStreaming()
+          throws InterruptedException, IOException {
+    TableReference ref =
+        new TableReference().setProjectId("project").setDatasetId("dataset").setTableId("table");
+    List<ValueInSingleWindow<TableRow>> rows =
+        ImmutableList.of(wrapTableRow(new TableRow()), wrapTableRow(new TableRow()));
+
+    final TableDataInsertAllResponse allRowsSucceeded = new TableDataInsertAllResponse();
+
+    when(response.getContentType()).thenReturn(Json.MEDIA_TYPE);
+    when(response.getStatusCode()).thenReturn(200);
+    when(response.getContent()).thenReturn(toStream(allRowsSucceeded));
+
+    DatasetServiceImpl dataService =
+            new DatasetServiceImpl(bigquery, PipelineOptionsFactory.create());
+
+    dataService.insertAll(
+            ref,
+            rows,
+            null,
+            BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
+            new MockSleeper(),
+            InsertRetryPolicy.neverRetry(),
+            Lists.newArrayList(),
+            false,
+            false);
+
+    TableDataInsertAllRequest parsedRequest =
+            (TableDataInsertAllRequest) fromContent(request.getContentAsString());
+
+    assertFalse(parsedRequest.getSkipInvalidRows());
+    assertFalse(parsedRequest.getIgnoreUnknownValues());
+
+    dataService.insertAll(
+            ref,
+            rows,
+            null,
+            BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
+            new MockSleeper(),
+            InsertRetryPolicy.neverRetry(),
+            Lists.newArrayList(),
+            true,
+            true);
+
+    parsedRequest =
+            (TableDataInsertAllRequest) fromContent(request.getContentAsString());
+
+    assert parsedRequest.getSkipInvalidRows();
+    assert parsedRequest.getIgnoreUnknownValues();
+  }
+
+  private static GenericJson fromContent(String content) throws IOException {
+    return JacksonFactory.getDefaultInstance().fromString(content, GenericJson.class);
   }
 
   /** A helper to wrap a {@link GenericJson} object in a content stream. */
