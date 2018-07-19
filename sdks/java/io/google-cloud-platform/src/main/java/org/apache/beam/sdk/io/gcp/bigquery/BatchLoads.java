@@ -547,7 +547,8 @@ class BatchLoads<DestinationT>
                 createDisposition,
                 sideInputs,
                 dynamicDestinations,
-                loadJobProjectId));
+                loadJobProjectId,
+                ignoreUnknownValues));
   }
 
   private WriteResult writeResult(Pipeline p) {
