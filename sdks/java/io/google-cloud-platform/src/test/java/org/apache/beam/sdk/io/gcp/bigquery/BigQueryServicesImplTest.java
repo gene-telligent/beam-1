@@ -24,6 +24,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertNull;
 import static org.junit.Assert.assertThat;
+import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
 import static org.mockito.Mockito.times;
 import static org.mockito.Mockito.verify;
@@ -48,6 +49,7 @@ import com.google.api.services.bigquery.model.Job;
 import com.google.api.services.bigquery.model.JobReference;
 import com.google.api.services.bigquery.model.JobStatus;
 import com.google.api.services.bigquery.model.Table;
+import com.google.api.services.bigquery.model.TableDataInsertAllRequest;
 import com.google.api.services.bigquery.model.TableDataInsertAllResponse;
 import com.google.api.services.bigquery.model.TableDataInsertAllResponse.InsertErrors;
 import com.google.api.services.bigquery.model.TableDataList;
@@ -55,7 +57,6 @@ import com.google.api.services.bigquery.model.TableFieldSchema;
 import com.google.api.services.bigquery.model.TableReference;
 import com.google.api.services.bigquery.model.TableRow;
 import com.google.api.services.bigquery.model.TableSchema;
-import com.google.api.services.bigquery.model.TableDataInsertAllRequest;
 import com.google.cloud.hadoop.util.ApiErrorExtractor;
 import com.google.cloud.hadoop.util.RetryBoundedBackOff;
 import com.google.common.collect.ImmutableList;
@@ -101,18 +102,17 @@ public class BigQueryServicesImplTest {
     MockitoAnnotations.initMocks(this);
 
     // Set up the MockHttpRequest for future inspection
-    request = new MockLowLevelHttpRequest() {
-      @Override
-      public LowLevelHttpResponse execute() throws IOException {
-        return response;
-      }
-    };
+    request =
+        new MockLowLevelHttpRequest() {
+          @Override
+          public LowLevelHttpResponse execute() throws IOException {
+            return response;
+          }
+        };
 
     // A mock transport that lets us mock the API responses.
     MockHttpTransport transport =
-        new MockHttpTransport.Builder()
-            .setLowLevelHttpRequest(request)
-            .build();
+        new MockHttpTransport.Builder().setLowLevelHttpRequest(request).build();
 
     // A sample BigQuery API client that uses default JsonFactory and RetryHttpInitializer.
     bigquery =
@@ -736,7 +736,7 @@ public class BigQueryServicesImplTest {
    */
   @Test
   public void testSkipInvalidRowsIgnoreUnknownValuesStreaming()
-          throws InterruptedException, IOException {
+      throws InterruptedException, IOException {
     TableReference ref =
         new TableReference().setProjectId("project").setDatasetId("dataset").setTableId("table");
     List<ValueInSingleWindow<TableRow>> rows =
@@ -746,48 +746,50 @@ public class BigQueryServicesImplTest {
 
     when(response.getContentType()).thenReturn(Json.MEDIA_TYPE);
     when(response.getStatusCode()).thenReturn(200);
-    when(response.getContent()).thenReturn(toStream(allRowsSucceeded));
+    when(response.getContent())
+        .thenReturn(toStream(allRowsSucceeded))
+        .thenReturn(toStream(allRowsSucceeded));
 
     DatasetServiceImpl dataService =
-            new DatasetServiceImpl(bigquery, PipelineOptionsFactory.create());
+        new DatasetServiceImpl(bigquery, PipelineOptionsFactory.create());
 
     dataService.insertAll(
-            ref,
-            rows,
-            null,
-            BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
-            new MockSleeper(),
-            InsertRetryPolicy.neverRetry(),
-            Lists.newArrayList(),
-            false,
-            false);
+        ref,
+        rows,
+        null,
+        BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
+        new MockSleeper(),
+        InsertRetryPolicy.neverRetry(),
+        Lists.newArrayList(),
+        false,
+        false);
 
     TableDataInsertAllRequest parsedRequest =
-            (TableDataInsertAllRequest) fromContent(request.getContentAsString());
+        fromContent(request.getContentAsString(), TableDataInsertAllRequest.class);
 
     assertFalse(parsedRequest.getSkipInvalidRows());
     assertFalse(parsedRequest.getIgnoreUnknownValues());
 
     dataService.insertAll(
-            ref,
-            rows,
-            null,
-            BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
-            new MockSleeper(),
-            InsertRetryPolicy.neverRetry(),
-            Lists.newArrayList(),
-            true,
-            true);
+        ref,
+        rows,
+        null,
+        BackOffAdapter.toGcpBackOff(TEST_BACKOFF.backoff()),
+        new MockSleeper(),
+        InsertRetryPolicy.neverRetry(),
+        Lists.newArrayList(),
+        true,
+        true);
 
-    parsedRequest =
-            (TableDataInsertAllRequest) fromContent(request.getContentAsString());
+    parsedRequest = fromContent(request.getContentAsString(), TableDataInsertAllRequest.class);
 
-    assert parsedRequest.getSkipInvalidRows();
-    assert parsedRequest.getIgnoreUnknownValues();
+    assertTrue(parsedRequest.getSkipInvalidRows());
+    assertTrue(parsedRequest.getIgnoreUnknownValues());
   }
 
-  private static GenericJson fromContent(String content) throws IOException {
-    return JacksonFactory.getDefaultInstance().fromString(content, GenericJson.class);
+  private static <T extends GenericJson> T fromContent(String content, Class<T> clazz)
+      throws IOException {
+    return JacksonFactory.getDefaultInstance().fromString(content, clazz);
   }
 
   /** A helper to wrap a {@link GenericJson} object in a content stream. */
